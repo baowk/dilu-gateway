@@ -2,7 +2,7 @@ app:
   server:
     mode: dev         # 应用程序运行模式（dev开发环境、test测试环境、prod线上环境）
     host: 0.0.0.0     # 服务器IP地址，默认使用0.0.0.0
-    name: go-gateway      # 服务名称
+    name: dilu-gateway      # 服务名称
     port: 28000       # 服务端口号
     readtimeout: 1    # 读取超时时间
     writertimeout: 2  # 写入超时时间
@@ -28,63 +28,7 @@ app:
       rewrite: /v2/sso     # URL重写规则
       handlers:            # 处理器列表
         - jwt  # 处理器1
-    - rule:         # 规则1
-      name: plugin           # 规则名称为team
-      prefix: /v2/plugin     # 规则的URL前缀
-      upstreams:           # 转发至的上游服务器列表
-        - http://192.168.0.191:8811
-      rewrite:             # URL重写规则
-      handlers:            # 处理器列表
-        - jwt  # 处理器1
-        - auth  # 处理器2
-    - rule:         # 规则1
-      name: retail           # 规则名称为team
-      prefix: /v2/retail     # 规则的URL前缀
-      upstreams:           # 转发至的上游服务器列表
-        - http://192.168.0.191:8822
-      rewrite:             # URL重写规则
-      handlers:            # 处理器列表
-        - jwt  # 处理器1
-        - auth  # 处理器2
-    - rule:         # 规则1
-      name: proxy           # 规则名称为team
-      prefix: /v2/proxy     # 规则的URL前缀
-      upstreams:           # 转发至的上游服务器列表
-        - http://192.168.0.182
-      rewrite:             # URL重写规则
-      handlers:            # 处理器列表
-        - jwt  # 处理器1
-        - auth  # 处理器2
-    - rule:         # 规则1
-      name: cost           # 规则名称为team
-      prefix: /v2/cost     # 规则的URL前缀
-      upstreams:           # 转发至的上游服务器列表
-        - http://192.168.0.182
-      rewrite:             # URL重写规则
-      handlers:            # 处理器列表
-        - jwt  # 处理器1
-        - auth  # 处理器2
-    - rule:         # 规则1
-      name: newbrowser           # 规则名称为team
-      prefix: /v2/newbrowser     # 规则的URL前缀
-      upstreams:           # 转发至的上游服务器列表
-        - http://192.168.0.232:8080
-      rewrite:             # URL重写规则
-      handlers:            # 处理器列表
-        - jwt  # 处理器1
-        - auth  # 处理器2
-    - rule:         # 规则1
-      name: test           # 规则名称为team
-      prefix: /aaa     # 规则的URL前缀
-      upstreams:           # 转发至的上游服务器列表
-        - http://localhost
-      rewrite:             # URL重写规则
-    - rule:         # 规则1
-      name: hh           # 规则名称为team
-      prefix: /index     # 规则的URL前缀
-      upstreams:           # 转发至的上游服务器列表
-        - http://localhost
-      rewrite:             # URL重写规则
+
 
   logger:             # 日志配置
     path: temp/logs    # 日志存放路径
@@ -92,7 +36,7 @@ app:
     level: trace       # 日志等级（trace, debug, info, warn, error, fatal）
     enableddb: false   # 数据库日志开关
   jwt:                # JWT配置
-    secret: 5n1KywHIPEkWWIxffGpp8Dfl3z5SjE5WBeDStc1T64klnpoAqHrHN01vneteCZG4   # Token密钥
+    secret: 5nlKywHIPEkWWIxffGpp8Dfl3z5SjE5WBeDStc1T64klnpoAqHrHN01vnet1CZG4   # Token密钥
     timeout: 604800    # Token过期时间（单位：秒）
   database:           # 数据库配置
     driver: mysql                                                       # 数据库类型（mysql, sqlite3, postgres, sqlserver）
