@@ -1,7 +1,7 @@
 package def_handler
 
 import (
-	"encoding/json"
+	"dilu-gateway/handler/def_handler/utils"
 	"errors"
 	"fmt"
 	"net/http"
@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 var (
@@ -38,11 +38,15 @@ var (
 type JwtProxyHandler struct {
 	Secret    string
 	ExpiresAt int64
+
 	//	Pattern    *regexp.Regexp//"^/v2/.+/auth/.*$"
 	HeaderKey  string
 	HeaderName string
 	QueryKey   string
 	CookieKey  string
+	Refresh    int
+	Issuer     string
+	Subject    string
 }
 
 type JwtProxyHandlerBuilder struct {
@@ -51,6 +55,21 @@ type JwtProxyHandlerBuilder struct {
 
 func NewJwt() JwtProxyHandlerBuilder {
 	return JwtProxyHandlerBuilder{}
+}
+
+func (b JwtProxyHandlerBuilder) Refresh(refresh int) JwtProxyHandlerBuilder {
+	b.h.Refresh = refresh
+	return b
+}
+
+func (b JwtProxyHandlerBuilder) Subject(subject string) JwtProxyHandlerBuilder {
+	b.h.Subject = subject
+	return b
+}
+
+func (b JwtProxyHandlerBuilder) Issuer(issuer string) JwtProxyHandlerBuilder {
+	b.h.Issuer = issuer
+	return b
 }
 
 func (b JwtProxyHandlerBuilder) Secret(secret string) JwtProxyHandlerBuilder {
@@ -92,8 +111,6 @@ func (b JwtProxyHandlerBuilder) Build() JwtProxyHandler {
 }
 
 func (h JwtProxyHandler) BeforeHander(w http.ResponseWriter, r *http.Request, args ...interface{}) (int, string) {
-
-	fmt.Println("进入Before：" + r.URL.RequestURI())
 	var tokenStr string
 	var err error
 	if h.HeaderKey != "" {
@@ -114,13 +131,43 @@ func (h JwtProxyHandler) BeforeHander(w http.ResponseWriter, r *http.Request, ar
 		r.Header.Del("userId")
 		return 200, "未找到Token"
 	}
-	mc, err := ParseToken(tokenStr, h.Secret)
-	if err != nil {
-		return 1001, "Token有误"
+	customClaims := new(utils.CustomClaims)
+	err = ParseToken(tokenStr, customClaims, h.Secret, jwt.WithSubject(h.Subject))
+	if err != nil || customClaims == nil {
+		return 401, "Token有误"
 	}
-	r.Header.Set("userId", mc.Id)
-	r.Header.Set("companyId", mc.Issuer)
+
+	exp, err := customClaims.GetExpirationTime()
+	// 获取过期时间返回err,或者exp为nil都返回错误
+	if err != nil || exp == nil {
+		return 401, "token已失效"
+	}
+
+	// 刷新时间大于0则判断剩余时间小于刷新时间时刷新Token并在Response header中返回
+	if h.Refresh > 0 {
+		now := time.Now()
+		diff := exp.Time.Sub(now)
+		refreshTTL := time.Duration(h.Refresh) * time.Minute
+		//fmt.Println(diff.Seconds(), refreshTTL)
+		if diff < refreshTTL {
+			exp := time.Now().Add(time.Duration(h.ExpiresAt) * time.Minute)
+			customClaims.ExpiresAt(exp)
+			newToken, _ := Refresh(customClaims, h.Secret)
+			r.Header.Set("refresh-access-token", newToken)
+			r.Header.Set("refresh-exp", strconv.FormatInt(exp.Unix(), 10))
+		}
+	}
+
+	r.Header.Set("a_uid", fmt.Sprintf("%d", customClaims.UserId))
+	r.Header.Set("a_rid", fmt.Sprintf("%d", customClaims.RoleId))
+	r.Header.Set("a_mobile", customClaims.Phone)
+	r.Header.Set("a_nickname", customClaims.Nickname)
+	//r.Header.Set("jwt_data", customClaims.JwtData)
 	return 200, ""
+}
+
+func Refresh(claims jwt.Claims, secretKey string) (string, error) {
+	return utils.Generate(claims, secretKey)
 }
 
 func (h JwtProxyHandler) AfferHandler(w http.ResponseWriter, r *http.Request, args ...interface{}) (int, string) {
@@ -132,50 +179,19 @@ func (h JwtProxyHandler) GetName() string {
 	return "jwt"
 }
 
-func ParseToken(tokenString string, secret string) (jwt.StandardClaims, error) {
-	sc := jwt.StandardClaims{}
-
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-		}
-		return []byte(secret), nil
-	})
+func ParseToken(tokenString string, claims jwt.Claims, secret string, options ...jwt.ParserOption) error {
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (i interface{}, err error) {
+		return []byte(secret), err
+	}, options...)
 	if err != nil {
-		return sc, err
+		return err
 	}
 
-	claims, ok := token.Claims.(jwt.MapClaims)
-
-	if ok && token.Valid { // 校验token
-		if value, ok := claims["exp"]; ok {
-			sc.ExpiresAt = int64(GetInterfaceToInt(value))
-			fmt.Println(sc.ExpiresAt)
-		}
-		if value, ok := claims["jti"]; ok {
-			sc.Id = value.(string)
-		}
-		if value, ok := claims["iss"]; ok {
-			sc.Issuer = value.(string)
-		}
-		return sc, nil
+	// 对token对象中的Claim进行类型断言
+	if token.Valid { // 校验token
+		return nil
 	}
-
-	return sc, errors.New("invalid token")
-}
-
-func GenToken(userId string, timeout time.Time, secret string) (string, error) {
-	c := jwt.StandardClaims{
-		Id:        userId,
-		ExpiresAt: timeout.Unix(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, c)
-
-	tokenString, err := token.SignedString([]byte(secret))
-
-	fmt.Printf("tokenString:%s  \n", tokenString)
-
-	return tokenString, err
+	return errors.New("Invalid Token")
 }
 
 func jwtFromHeader(r *http.Request, key, name string) (string, error) {
@@ -205,73 +221,62 @@ func jwtFromCookie(r *http.Request, key string) (string, error) {
 	if cookie, err := r.Cookie(key); err == nil {
 		return cookie.Value, nil
 	}
-
 	return "", nil
 }
 
-// func jwtFromParam(r *http.Request, key string) (string, error) {
-// 	token := r.Param.Param(key)
-
-// 	if token == "" {
-// 		return "", ErrEmptyParamToken
+// func GetInterfaceToInt(t1 interface{}) int {
+// 	var t2 int
+// 	switch t1.(type) {
+// 	case uint:
+// 		t2 = int(t1.(uint))
+// 		break
+// 	case int8:
+// 		t2 = int(t1.(int8))
+// 		break
+// 	case uint8:
+// 		t2 = int(t1.(uint8))
+// 		break
+// 	case int16:
+// 		t2 = int(t1.(int16))
+// 		break
+// 	case uint16:
+// 		t2 = int(t1.(uint16))
+// 		break
+// 	case int32:
+// 		t2 = int(t1.(int32))
+// 		break
+// 	case uint32:
+// 		t2 = int(t1.(uint32))
+// 		break
+// 	case int64:
+// 		t2 = int(t1.(int64))
+// 		break
+// 	case uint64:
+// 		t2 = int(t1.(uint64))
+// 		break
+// 	case float32:
+// 		t2 = int(t1.(float32))
+// 		break
+// 	case float64:
+// 		t2 = int(t1.(float64))
+// 		break
+// 	case string:
+// 		t2, _ = strconv.Atoi(t1.(string))
+// 		if t2 == 0 && len(t1.(string)) > 0 {
+// 			f, _ := strconv.ParseFloat(t1.(string), 64)
+// 			t2 = int(f)
+// 		}
+// 		break
+// 	case nil:
+// 		t2 = 0
+// 		break
+// 	case json.Number:
+// 		t3, _ := t1.(json.Number).Int64()
+// 		t2 = int(t3)
+// 		break
+// 	default:
+// 		t2 = t1.(int)
+// 		break
 // 	}
-
-// 	return token, nil
+// 	return t2
 // }
-
-func GetInterfaceToInt(t1 interface{}) int {
-	var t2 int
-	switch t1.(type) {
-	case uint:
-		t2 = int(t1.(uint))
-		break
-	case int8:
-		t2 = int(t1.(int8))
-		break
-	case uint8:
-		t2 = int(t1.(uint8))
-		break
-	case int16:
-		t2 = int(t1.(int16))
-		break
-	case uint16:
-		t2 = int(t1.(uint16))
-		break
-	case int32:
-		t2 = int(t1.(int32))
-		break
-	case uint32:
-		t2 = int(t1.(uint32))
-		break
-	case int64:
-		t2 = int(t1.(int64))
-		break
-	case uint64:
-		t2 = int(t1.(uint64))
-		break
-	case float32:
-		t2 = int(t1.(float32))
-		break
-	case float64:
-		t2 = int(t1.(float64))
-		break
-	case string:
-		t2, _ = strconv.Atoi(t1.(string))
-		if t2 == 0 && len(t1.(string)) > 0 {
-			f, _ := strconv.ParseFloat(t1.(string), 64)
-			t2 = int(f)
-		}
-		break
-	case nil:
-		t2 = 0
-		break
-	case json.Number:
-		t3, _ := t1.(json.Number).Int64()
-		t2 = int(t3)
-		break
-	default:
-		t2 = t1.(int)
-		break
-	}
-	return t2
-}

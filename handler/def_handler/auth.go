@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
+	"strconv"
 )
 
 type AuthProxyHandler struct {
@@ -14,7 +14,7 @@ type AuthProxyHandler struct {
 }
 
 var client common.HTTPClient
-var perms = make(map[string]map[string]int, 0)
+var perms = make(map[string]int, 0)
 var initf = false
 
 func (h AuthProxyHandler) BeforeHander(w http.ResponseWriter, r *http.Request, args ...interface{}) (int, string) {
@@ -28,27 +28,17 @@ func (h AuthProxyHandler) BeforeHander(w http.ResponseWriter, r *http.Request, a
 	}
 	uri := r.Method + ":" + r.RequestURI
 	if m, ok := perms[uri]; ok {
-		uid := r.Header.Get("userId")
+		uid := r.Header.Get("a_uid")
 		if uid == "" {
 			return 1023, "未登录，无法访问"
 		}
-		companyId := r.Header.Get("companyId")
-		if companyId == "" {
-			return 1023, "需选择企业后操作"
+		teamId := r.Header.Get("team_id")
+		if teamId == "" {
+			return 1023, "需选择团队后操作"
 		}
-		up := getUserPerms(companyId, uid)
-		if up == "" {
-			return 1024, "没有访问权限"
+		if getUserPerms(m) != nil {
+			return 1023, "没有访问权限"
 		}
-		ids := strings.Split(up, ",")
-		for _, id := range ids {
-			if id != "" {
-				if _, ok := m[id]; ok {
-					return 200, ""
-				}
-			}
-		}
-		return 1023, "没有访问权限"
 	}
 
 	return 200, ""
@@ -71,8 +61,17 @@ type Res struct {
 	Data interface{} `json:"data"`
 }
 
+type SysApi struct {
+	Id       int    `json:"id"`       //主键
+	Title    string `json:"title"`    //标题
+	Method   string `json:"method"`   //请求类型
+	Path     string `json:"path"`     //请求地址
+	PermType int    `json:"permType"` //权限类型（1：无需认证 2:须token 3：须鉴权）
+	Status   int    `json:"status"`   //状态 3 DEF 2 OK 1 del
+}
+
 func getAllPerms() error {
-	resB, err := client.Post("/v2/team/perms", nilReqData)
+	resB, err := client.Post("/api/v1/sys/sys-api/all", nilReqData)
 	if err != nil {
 		fmt.Print(err)
 		return err
@@ -86,7 +85,11 @@ func getAllPerms() error {
 		if err != nil {
 			return err
 		}
-		if err := json.Unmarshal(d, &perms); err == nil {
+		var list []SysApi
+		if err := json.Unmarshal(d, &list); err == nil {
+			for _, item := range list {
+				perms[item.Method+":"+item.Path] = item.Id
+			}
 			initf = true
 		} else {
 			return err
@@ -97,23 +100,18 @@ func getAllPerms() error {
 	return nil
 }
 
-func getUserPerms(companyId, uid string) string {
-	client.AddHeader("userId", uid)
-	client.AddHeader("companyId", companyId)
-	resB, err := client.Post("/v2/team/myPerms", nilReqData)
+func getUserPerms(m int) error {
+	client.AddHeader("apid_id", strconv.Itoa(m))
+	resB, err := client.Post("/api/v1/sys/canAccess", nilReqData)
 	if err != nil {
-		return ""
+		return err
 	}
 	var res Res
 	if err = json.Unmarshal(resB, &res); err != nil {
-		return ""
+		return err
 	}
 	if res.Code == 200 {
-		d, err := json.Marshal(res.Data)
-		if err != nil {
-			return ""
-		}
-		return string(d)
+		return nil
 	}
-	return ""
+	return errors.New(res.Msg)
 }

@@ -48,6 +48,9 @@ type LoggerConf struct {
 type JWTConf struct {
 	Secret  string `mapstructure:"secret"`
 	Timeout int64  `mapstructure:"timeout"`
+	Refresh int    `mapstructure:"refresh" json:"refresh" yaml:"refresh"` // 刷新时长
+	Issuer  string `mapstructure:"issuer" json:"issuer" yaml:"issuer"`    // 签发人
+	Subject string `mapstructure:"subject" json:"subject" yaml:"subject"` // 签发主体
 }
 
 type DatabaseConf struct {

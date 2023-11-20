@@ -41,7 +41,8 @@ func Append(h handler.ProxyHandler) {
 }
 
 func Run(conf config.AppConfig) {
-	Append(def_handler.NewJwt().Secret(conf.App.JWT.Secret).ExpiresAt(conf.App.JWT.Timeout).Build())
+	Append(def_handler.NewJwt().Secret(conf.App.JWT.Secret).ExpiresAt(conf.App.JWT.Timeout).
+		Subject(conf.App.JWT.Subject).Issuer(conf.App.JWT.Issuer).Refresh(conf.App.JWT.Refresh).Build())
 	m := conf.App.Extend
 	Append(def_handler.AuthProxyHandler{BaseURL: m["authbaseurl"]})
 	for _, ruleC := range conf.App.Rules {
