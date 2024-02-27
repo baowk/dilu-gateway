@@ -4,7 +4,6 @@ import (
 	"dilu-gateway/common"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 )
@@ -45,7 +44,6 @@ func (h AuthProxyHandler) BeforeHander(w http.ResponseWriter, r *http.Request, a
 }
 
 func (h AuthProxyHandler) AfferHandler(w http.ResponseWriter, r *http.Request, args ...interface{}) (int, string) {
-	fmt.Println("AFT AuthProxyHandler")
 	return 200, ""
 }
 
@@ -73,7 +71,6 @@ type SysApi struct {
 func getAllPerms() error {
 	resB, err := client.Post("/api/v1/sys/sys-api/all", nilReqData)
 	if err != nil {
-		fmt.Print(err)
 		return err
 	}
 	var res Res

@@ -36,10 +36,8 @@ var (
 )
 
 type JwtProxyHandler struct {
-	Secret    string
-	ExpiresAt int64
-
-	//	Pattern    *regexp.Regexp//"^/v2/.+/auth/.*$"
+	Secret     string
+	ExpiresAt  int64
 	HeaderKey  string
 	HeaderName string
 	QueryKey   string
@@ -148,7 +146,6 @@ func (h JwtProxyHandler) BeforeHander(w http.ResponseWriter, r *http.Request, ar
 		now := time.Now()
 		diff := exp.Time.Sub(now)
 		refreshTTL := time.Duration(h.Refresh) * time.Minute
-		//fmt.Println(diff.Seconds(), refreshTTL)
 		if diff < refreshTTL {
 			exp := time.Now().Add(time.Duration(h.ExpiresAt) * time.Minute)
 			customClaims.ExpiresAt(exp)
@@ -199,12 +196,10 @@ func jwtFromHeader(r *http.Request, key, name string) (string, error) {
 	if authHeader == "" {
 		return "", ErrEmptyAuthHeader
 	}
-
 	parts := strings.SplitN(authHeader, " ", 2)
 	if !(len(parts) == 2 && parts[0] == name) {
 		return "", ErrInvalidAuthHeader
 	}
-
 	return parts[1], nil
 }
 
@@ -213,7 +208,6 @@ func jwtFromQuery(r *http.Request, key string) (string, error) {
 	if token == "" {
 		return "", ErrEmptyQueryToken
 	}
-
 	return token, nil
 }
 
@@ -223,60 +217,3 @@ func jwtFromCookie(r *http.Request, key string) (string, error) {
 	}
 	return "", nil
 }
-
-// func GetInterfaceToInt(t1 interface{}) int {
-// 	var t2 int
-// 	switch t1.(type) {
-// 	case uint:
-// 		t2 = int(t1.(uint))
-// 		break
-// 	case int8:
-// 		t2 = int(t1.(int8))
-// 		break
-// 	case uint8:
-// 		t2 = int(t1.(uint8))
-// 		break
-// 	case int16:
-// 		t2 = int(t1.(int16))
-// 		break
-// 	case uint16:
-// 		t2 = int(t1.(uint16))
-// 		break
-// 	case int32:
-// 		t2 = int(t1.(int32))
-// 		break
-// 	case uint32:
-// 		t2 = int(t1.(uint32))
-// 		break
-// 	case int64:
-// 		t2 = int(t1.(int64))
-// 		break
-// 	case uint64:
-// 		t2 = int(t1.(uint64))
-// 		break
-// 	case float32:
-// 		t2 = int(t1.(float32))
-// 		break
-// 	case float64:
-// 		t2 = int(t1.(float64))
-// 		break
-// 	case string:
-// 		t2, _ = strconv.Atoi(t1.(string))
-// 		if t2 == 0 && len(t1.(string)) > 0 {
-// 			f, _ := strconv.ParseFloat(t1.(string), 64)
-// 			t2 = int(f)
-// 		}
-// 		break
-// 	case nil:
-// 		t2 = 0
-// 		break
-// 	case json.Number:
-// 		t3, _ := t1.(json.Number).Int64()
-// 		t2 = int(t3)
-// 		break
-// 	default:
-// 		t2 = t1.(int)
-// 		break
-// 	}
-// 	return t2
-// }

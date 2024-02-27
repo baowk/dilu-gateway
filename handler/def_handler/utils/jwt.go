@@ -7,67 +7,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// func GetUserId(c *gin.Context) int {
-// 	uid := c.GetInt("a_uid")
-// 	if uid == 0 {
-// 		suid := c.GetHeader("a_uid")
-// 		if suid != "" {
-// 			uid, _ = strconv.Atoi(suid)
-// 		}
-// 	}
-// 	return uid
-// }
-
-// func GetTeamId(c *gin.Context) int {
-// 	if GetRoleId(c) != 0 {
-// 		return -1
-// 	}
-// 	sTeamId := c.GetHeader("teamId")
-// 	if sTeamId != "" {
-// 		teamId, _ := strconv.Atoi(sTeamId)
-// 		return teamId
-// 	}
-// 	return c.GetInt("teamId")
-// }
-
-// func GetReqTeamId(c *gin.Context, reqTeamId int) int {
-// 	teamId := GetTeamId(c)
-// 	if teamId == -1 {
-// 		if reqTeamId == 0 {
-// 			return teamId
-// 		}
-// 		return reqTeamId
-// 	}
-// 	return teamId
-// }
-
-// func GetRoleId(c *gin.Context) int {
-// 	rid := c.GetInt("a_rid")
-// 	if rid == 0 {
-// 		suid := c.GetHeader("a_rid")
-// 		if suid != "" {
-// 			rid, _ = strconv.Atoi(suid)
-// 		}
-// 	}
-// 	return rid
-// }
-
-// func GetPhone(c *gin.Context) string {
-// 	phone := c.GetString("a_mobile")
-// 	if phone == "" {
-// 		phone = c.GetHeader("phone")
-// 	}
-// 	return phone
-// }
-
-// func GetNickname(c *gin.Context) string {
-// 	nickname := c.GetString("a_nickname")
-// 	if nickname == "" {
-// 		nickname = c.GetHeader("a_nickname")
-// 	}
-// 	return nickname
-// }
-
 // Generate 生成JWT Token
 func Generate(claims jwt.Claims, secretKey string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

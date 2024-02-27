@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"dilu-gateway/config"
 	"dilu-gateway/proxy"
 	"errors"
 	"fmt"
@@ -18,7 +17,7 @@ var (
 	//userLicense string
 
 	rootCmd = &cobra.Command{
-		Use:          "go-gateway c config.yaml",
+		Use:          "go-gateway -c resources/config.dev.yaml",
 		Short:        "go-gateway",
 		Long:         `go-gateway`,
 		SilenceUsage: true,
@@ -78,10 +77,9 @@ func initConfig() {
 
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
-		var config config.AppConfig
-		if err := viper.Unmarshal(&config); err != nil {
+		if err := viper.Unmarshal(&proxy.Cfg); err != nil {
 			log.Fatal(err) // 解析配置文件失败
 		}
-		proxy.Run(config)
+		proxy.Run()
 	}
 }

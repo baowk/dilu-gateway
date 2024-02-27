@@ -2,7 +2,6 @@ package common
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"net/http"
 )
@@ -40,8 +39,6 @@ func (c *HTTPClient) Get(endpoint string) ([]byte, error) {
 func (c *HTTPClient) Post(endpoint string, data []byte) ([]byte, error) {
 	url := c.BaseURL + endpoint
 
-	fmt.Println(url)
-
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
 	if err != nil {
 		return nil, err
@@ -57,7 +54,6 @@ func (c *HTTPClient) Post(endpoint string, data []byte) ([]byte, error) {
 
 func do(req *http.Request) ([]byte, error) {
 	client := &http.Client{}
-	fmt.Printf("%s : %s ", req.Method, req.URL)
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err

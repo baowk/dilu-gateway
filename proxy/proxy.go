@@ -14,6 +14,13 @@ import (
 	"dilu-gateway/config"
 	"dilu-gateway/handler"
 	"dilu-gateway/handler/def_handler"
+
+	"go.uber.org/zap"
+)
+
+var (
+	Cfg *config.AppInfo
+	Log *zap.Logger
 )
 
 type Upstream struct {
@@ -40,12 +47,14 @@ func Append(h handler.ProxyHandler) {
 	handlerMap[h.GetName()] = h
 }
 
-func Run(conf config.AppConfig) {
-	Append(def_handler.NewJwt().Secret(conf.App.JWT.Secret).ExpiresAt(conf.App.JWT.Timeout).
-		Subject(conf.App.JWT.Subject).Issuer(conf.App.JWT.Issuer).Refresh(conf.App.JWT.Refresh).Build())
-	m := conf.App.Extend
+func Run() {
+	//初始化日志
+	logInit()
+	Append(def_handler.NewJwt().Secret(Cfg.JWT.Secret).ExpiresAt(Cfg.JWT.Timeout).
+		Subject(Cfg.JWT.Subject).Issuer(Cfg.JWT.Issuer).Refresh(Cfg.JWT.Refresh).Build())
+	m := Cfg.Extend
 	Append(def_handler.AuthProxyHandler{BaseURL: m["authbaseurl"]})
-	for _, ruleC := range conf.App.Rules {
+	for _, ruleC := range Cfg.Rules {
 		rule := Rule{
 			Name:      ruleC.RuleName,
 			Prefix:    ruleC.Prefix,
@@ -64,7 +73,6 @@ func Run(conf config.AppConfig) {
 		startTime := time.Now()
 		// 根据规则匹配请求路径
 		for _, rule := range rules {
-			fmt.Printf("uri:%s,prefix:%s,匹配 %v\n", r.RequestURI, rule.Prefix, strings.HasPrefix(r.RequestURI, rule.Prefix))
 			if strings.HasPrefix(r.RequestURI, rule.Prefix) {
 				var upstream string
 				size := len(rule.Upstreams)
@@ -83,12 +91,11 @@ func Run(conf config.AppConfig) {
 				// 解析代理目标URL
 				targetURL, err := url.Parse(tgUrl)
 				if err != nil {
-					log.Println(err)
+					Log.Error("parse error", zap.Error(err))
 					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					return
 				}
 
-				r.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
 				for _, handler := range rule.Handlers {
 					code, msg := (*handler).BeforeHander(w, r)
 					if code != 200 {
@@ -98,32 +105,37 @@ func Run(conf config.AppConfig) {
 						}
 						jsonBytes, err := json.Marshal(data)
 						if err != nil {
-							log.Fatal(err)
+							Log.Error("marshal err", zap.Error(err))
 						}
 						w.Write(jsonBytes)
+						Log.Warn("before", zap.String("url", tgUrl), zap.String("handler", (*handler).GetName()), zap.String("msg", msg))
 						return
 					}
 				}
 
 				targetURL.Path = ""
-
-				fmt.Println("targetURL:" + targetURL.String() + "  path:" + targetURL.Path)
+				r.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
+				//Log.Debug("target", zap.String("URL", targetURL.String()), zap.String("path", targetURL.Path))
 				// 创建代理，并将请求重定向到代理目标
 				proxy := httputil.NewSingleHostReverseProxy(targetURL)
-
+				proxy.ErrorHandler = func(w http.ResponseWriter, req *http.Request, err error) {
+					Log.Error("proxy error", zap.String("url", tgUrl), zap.Error(err))
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				}
 				proxy.ServeHTTP(w, r)
-				fmt.Printf("用时：%v  \n", time.Now().Sub(startTime))
+				Log.Debug("times", zap.Any("time", time.Now().Sub(startTime)))
 				return
 			}
 		}
 
 		// 如果没有匹配的规则，则返回404 Not Found
 		http.NotFound(w, r)
+		Log.Error("no match", zap.String("RequestURI", r.RequestURI))
 
 	})
 
-	addr := fmt.Sprintf("%s:%d", conf.App.Server.Host, conf.App.Server.Port)
-	fmt.Printf("启动服务监听%s \n", addr)
+	addr := fmt.Sprintf("%s:%d", Cfg.Server.Host, Cfg.Server.Port)
+	fmt.Printf("启动服务监听:%s\n", addr)
 	// 启动HTTP服务器
 	err := http.ListenAndServe(addr, handler)
 	if err != nil {
