@@ -15,6 +15,7 @@ import (
 	"dilu-gateway/handler"
 	"dilu-gateway/handler/def_handler"
 
+	"github.com/baowk/dilu-rd/rd"
 	"go.uber.org/zap"
 )
 
@@ -31,6 +32,8 @@ type Upstream struct {
 }
 
 type Rule struct {
+	Rd        bool
+	Upstream  string
 	Name      string                  //名称
 	Prefix    string                  //匹配前缀
 	Upstreams []string                //后端 服务器
@@ -50,6 +53,16 @@ func Append(h handler.ProxyHandler) {
 func Run() {
 	//初始化日志
 	logInit()
+	//初始化注册中心
+	var rdc rd.RDClient
+	if Cfg.RdConfig.Enable {
+		var err error
+		rdc, err = rd.NewRDClient(&Cfg.RdConfig, Log.Sugar())
+		if err != nil {
+			Log.Error("init rd client error", zap.Error(err))
+			log.Fatal("init rdclient error")
+		}
+	}
 	Append(def_handler.NewJwt().Secret(Cfg.JWT.Secret).ExpiresAt(Cfg.JWT.Timeout).
 		Subject(Cfg.JWT.Subject).Issuer(Cfg.JWT.Issuer).Refresh(Cfg.JWT.Refresh).Build())
 	m := Cfg.Extend
@@ -60,6 +73,7 @@ func Run() {
 			Prefix:    ruleC.Prefix,
 			Upstreams: ruleC.Upstreams,
 			Rewrite:   ruleC.Rewrite,
+			Rd:        ruleC.Rd,
 		}
 		for _, hname := range ruleC.Handlers {
 			if h, ok := handlerMap[hname]; ok {
@@ -75,11 +89,22 @@ func Run() {
 		for _, rule := range rules {
 			if strings.HasPrefix(r.RequestURI, rule.Prefix) {
 				var upstream string
-				size := len(rule.Upstreams)
-				if size == 1 {
-					upstream = rule.Upstreams[0]
+				if rule.Rd {
+					// 从注册中心获取服务列表
+					node, err := rdc.GetService(rule.Name, r.RemoteAddr)
+					if err != nil {
+						Log.Error("get service error", zap.Error(err))
+						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+						return
+					}
+					upstream = fmt.Sprintf("%s://%s:%d", node.Protocol, node.Addr, node.Port)
 				} else {
-					upstream = rule.Upstreams[rand.Intn(size)]
+					size := len(rule.Upstreams)
+					if size == 1 {
+						upstream = rule.Upstreams[0]
+					} else {
+						upstream = rule.Upstreams[rand.Intn(size)]
+					}
 				}
 
 				var tgUrl string
@@ -123,7 +148,7 @@ func Run() {
 					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				}
 				proxy.ServeHTTP(w, r)
-				Log.Debug("times", zap.Any("time", time.Now().Sub(startTime)))
+				Log.Debug("times", zap.Any(tgUrl, time.Now().Sub(startTime)))
 				return
 			}
 		}

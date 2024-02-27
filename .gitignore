@@ -1,6 +1,7 @@
 .idea
 .vscode
 */.DS_Store
+dilu-gateway
 *.exe
 *.log
 temp/
@@ -10,4 +11,4 @@ vendor
 
 # go sum
 go.sum
-config/settings.deva.yml
+*/config.local.yaml

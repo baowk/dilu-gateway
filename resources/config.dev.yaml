@@ -8,9 +8,10 @@ server:
   enabledp: false   # 数据权限功能开关
 rules:            # 规则列表
   - rule:         # 规则1
-    name: team           # 规则名称为team
+    rd : false # true 注册中心模式 false 路由模式，路由模式需要配置upstreams
+    name: dilu-app           # 规则名称为team
     prefix: /api/v1     # 规则的URL前缀
-    upstreams:           # 转发至的上游服务器列表
+    upstreams:           # 转发至的上游服务器列表（注册中心模式该值不用配置）
       - http://localhost:7888
       #- http://localhost:8000
       #- http://192.168.0.191:18000
@@ -32,6 +33,28 @@ jwt:                # JWT配置
   secret: 5nlKywHIPEkWWIxffGpp8Dfl3z5SjE5WBeDStc1T64klnpoAqHrHN01vnet1CZG4   # Token密钥
   timeout: 604800    # Token过期时间（单位：秒）
   refresh: 14400    # Token 刷新时长（单位：分钟）
+rd-config:
+  enable: false
+  driver: consul
+  endpoints:
+    - 172.19.167.104:8500
+  scheme: http
+  timeout: 5s
+  registers:
+      #- id:  #172.19.167.104:7888
+      #  protocol: http
+        #interval: 5s
+        #timeout: 10s
+        #name: dilu-app
+        #addr: 172.19.167.104
+        #port: 7888
+        #health-check: http://172.19.167.104:7888/api/health
+        #tags:
+        #  - "dev"    
+  discoveries:
+    - name: dilu-app
+      enable: true
+      fail-limit: 3
 extend:             # 扩展项（此处没有提供具体说明）
   authBaseUrl: http://localhost:7888
       

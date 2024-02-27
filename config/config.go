@@ -1,15 +1,18 @@
 package config
 
+import "github.com/baowk/dilu-rd/config"
+
 // type AppConfig struct {
 // 	App AppInfo `mapstructure:"app" json:"app" yaml:"app"`
 // }
 
 type AppInfo struct {
-	Server ServerConf        `mapstructure:"server" json:"server" yaml:"server"`
-	Rules  []RuleConf        `mapstructure:"rules" json:"rules" yaml:"rules"`
-	Logger LogCfg            `mapstructure:"logger" json:"logger" yaml:"logger"`
-	JWT    JWTConf           `mapstructure:"jwt" json:"jwt" yaml:"jwt"`
-	Extend map[string]string `mapstructure:"extend" json:"extend" yaml:"extend"`
+	Server   ServerConf        `mapstructure:"server" json:"server" yaml:"server"`
+	Rules    []RuleConf        `mapstructure:"rules" json:"rules" yaml:"rules"`
+	Logger   LogCfg            `mapstructure:"logger" json:"logger" yaml:"logger"`
+	JWT      JWTConf           `mapstructure:"jwt" json:"jwt" yaml:"jwt"`
+	RdConfig config.Config     `mapstructure:"rd-config" json:"rd-config" yaml:"rd-config"`
+	Extend   map[string]string `mapstructure:"extend" json:"extend" yaml:"extend"`
 }
 
 type ServerConf struct {
@@ -23,6 +26,7 @@ type ServerConf struct {
 }
 
 type RuleConf struct {
+	Rd        bool     `mapstructure:"rd" json:"rd" yaml:"rd"`
 	RuleName  string   `mapstructure:"name" json:"name" yaml:"name"`
 	Prefix    string   `mapstructure:"prefix" json:"prefix" yaml:"prefix"`
 	Upstreams []string `mapstructure:"upstreams" json:"upstreams" yaml:"upstreams"`
