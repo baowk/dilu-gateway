@@ -9,7 +9,7 @@ server:
 rules:            # 规则列表
   - rule:         # 规则1
     rd : false # true 注册中心模式 false 路由模式，路由模式需要配置upstreams
-    name: dilu-app           # 规则名称为team
+    name: dilu-app       # 注册中心模式name与注册中心的name要保持一致
     prefix: /api/v1     # 规则的URL前缀
     upstreams:           # 转发至的上游服务器列表（注册中心模式该值不用配置）
       - http://localhost:7888
