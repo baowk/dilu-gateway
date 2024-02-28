@@ -22,6 +22,7 @@ import (
 var (
 	Cfg *config.AppConfig
 	Log *zap.Logger
+	rdc rd.RDClient
 )
 
 type Upstream struct {
@@ -51,44 +52,9 @@ func Append(h handler.ProxyHandler) {
 }
 
 func Run() {
-	//初始化日志
-	logInit()
-	//初始化注册中心
-	var rdc rd.RDClient
-	if Cfg.RdConfig.Enable {
-		var err error
-		rdc, err = rd.NewRDClient(&Cfg.RdConfig, Log.Sugar())
-		if err != nil {
-			Log.Error("init rd client error", zap.Error(err))
-			log.Fatal("init rdclient error")
-		}
-	}
-	jwt := &def.JwtProxyHandler{
-		ExpiresAt: Cfg.JWT.Timeout,
-		Refresh:   Cfg.JWT.Refresh,
-		Issuer:    Cfg.JWT.Issuer,
-		Subject:   Cfg.JWT.Subject,
-		Secret:    Cfg.JWT.Secret,
-	}
-	jwt.Build()
-	Append(jwt)
-	Append(&def.AuthProxyHandler{BaseURL: Cfg.Auth.BaseUrl})
-
-	for _, ruleC := range Cfg.Rules {
-		rule := Rule{
-			Name:      ruleC.RuleName,
-			Prefix:    ruleC.Prefix,
-			Upstreams: ruleC.Upstreams,
-			Rewrite:   ruleC.Rewrite,
-			Rd:        ruleC.Rd,
-		}
-		for _, hname := range ruleC.Handlers {
-			if h, ok := handlerMap[hname]; ok {
-				rule.Handlers = append(rule.Handlers, &h)
-			}
-		}
-		rules = append(rules, rule)
-	}
+	InitLog()
+	InitRd()
+	InitHandler()
 	// 创建一个自定义的请求处理程序
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		startTime := time.Now()
@@ -172,5 +138,52 @@ func Run() {
 	err := http.ListenAndServe(addr, handler)
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+func InitLog() {
+	// 初始化日志
+	logInit()
+	// 初始化注册中心
+
+}
+
+func InitRd() {
+	if Cfg.RdConfig.Enable {
+		var err error
+		rdc, err = rd.NewRDClient(&Cfg.RdConfig, Log.Sugar())
+		if err != nil {
+			Log.Error("init rd client error", zap.Error(err))
+			log.Fatal("init rdclient error")
+		}
+	}
+}
+
+func InitHandler() {
+	jwt := &def.JwtProxyHandler{
+		ExpiresAt: Cfg.JWT.Timeout,
+		Refresh:   Cfg.JWT.Refresh,
+		Issuer:    Cfg.JWT.Issuer,
+		Subject:   Cfg.JWT.Subject,
+		Secret:    Cfg.JWT.Secret,
+	}
+	jwt.Build()
+	Append(jwt)
+	Append(&def.AuthProxyHandler{BaseURL: Cfg.Extend.Auth.BaseUrl})
+
+	for _, ruleC := range Cfg.Rules {
+		rule := Rule{
+			Name:      ruleC.RuleName,
+			Prefix:    ruleC.Prefix,
+			Upstreams: ruleC.Upstreams,
+			Rewrite:   ruleC.Rewrite,
+			Rd:        ruleC.Rd,
+		}
+		for _, hname := range ruleC.Handlers {
+			if h, ok := handlerMap[hname]; ok {
+				rule.Handlers = append(rule.Handlers, &h)
+			}
+		}
+		rules = append(rules, rule)
 	}
 }

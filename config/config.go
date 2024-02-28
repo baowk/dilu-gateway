@@ -17,7 +17,7 @@ type AppConfig struct {
 	Logger    LogCfg        `mapstructure:"logger" json:"logger" yaml:"logger"`
 	JWT       JWTConf       `mapstructure:"jwt" json:"jwt" yaml:"jwt"`
 	RdConfig  config.Config `mapstructure:"rd-config" json:"rd-config" yaml:"rd-config"`
-	Auth      Auth          `mapstructure:"auth" json:"auth" yaml:"auth"`
+	Extend    Extend        `mapstructure:"extend" json:"extend" yaml:"extend"`
 }
 
 type ServerConf struct {
@@ -68,6 +68,10 @@ func (e *RemoteCfg) GetConfigType() string {
 		return "yaml"
 	}
 	return e.ConfigType
+}
+
+type Extend struct {
+	Auth Auth
 }
 
 type Auth struct {

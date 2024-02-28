@@ -5,12 +5,14 @@ import (
 	"dilu-gateway/proxy"
 	"errors"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	_ "github.com/spf13/viper/remote"
+	"go.uber.org/zap"
 )
 
 var (
@@ -55,7 +57,6 @@ func init() {
 func initConfig() {
 	v := viper.New()
 	v.SetConfigFile(cfgFile)
-	//v.SetConfigType("yaml")
 	err := v.ReadInConfig()
 	if err != nil {
 		panic(fmt.Sprintf("Fatal error config file: %v \n", err))
@@ -84,7 +85,6 @@ func initConfig() {
 		}
 		var remoteCfg config.AppConfig
 		rviper.Unmarshal(&remoteCfg)
-
 		mergeCfg(&cfg, &remoteCfg)
 
 		go func() {
@@ -95,8 +95,29 @@ func initConfig() {
 					fmt.Println(err)
 					continue
 				}
-				rviper.Unmarshal(&remoteCfg)
-				mergeCfg(&cfg, &remoteCfg)
+				var watchCfg config.AppConfig
+				err = rviper.Unmarshal(&watchCfg)
+				if err != nil {
+					proxy.Log.Error("watch err", zap.Error(err))
+					continue
+				}
+				if !reflect.DeepEqual(remoteCfg, watchCfg) {
+					proxy.Log.Debug("watch config changed", zap.Any("config", watchCfg))
+					//fmt.Println("watch config changed", remoteCfg, watchCfg)
+					mergeCfg(&cfg, &watchCfg)
+					if !reflect.DeepEqual(remoteCfg.Logger, watchCfg.Logger) {
+						proxy.InitLog()
+					}
+					if !reflect.DeepEqual(remoteCfg.RdConfig, watchCfg.RdConfig) {
+						proxy.InitRd()
+					}
+					if !reflect.DeepEqual(remoteCfg.JWT, watchCfg.JWT) ||
+						!reflect.DeepEqual(remoteCfg.Rules, watchCfg.Rules) ||
+						!reflect.DeepEqual(remoteCfg.Extend, watchCfg.Extend) {
+						proxy.InitHandler()
+					}
+					remoteCfg = watchCfg
+				}
 			}
 		}()
 	} else {
@@ -104,11 +125,11 @@ func initConfig() {
 		v.WatchConfig()
 		v.OnConfigChange(func(e fsnotify.Event) {
 			fmt.Println("config file changed:", e.String())
+			proxy.Log.Debug("config file changed", zap.String("config", e.String()))
 			if err = v.Unmarshal(&cfg); err != nil {
 				fmt.Println(err)
 			}
 			mergeCfg(&cfg, nil)
-
 		})
 	}
 	proxy.Run()
@@ -117,11 +138,12 @@ func initConfig() {
 func mergeCfg(local, remote *config.AppConfig) {
 	if remote != nil {
 		proxy.Cfg = local
-		proxy.Cfg = remote
-		proxy.Cfg.Server = local.Server
-		proxy.Cfg.RemoteCfg = local.RemoteCfg
+		proxy.Cfg.Logger = remote.Logger
+		proxy.Cfg.JWT = remote.JWT
+		proxy.Cfg.Rules = remote.Rules
+		proxy.Cfg.Extend = remote.Extend
+		proxy.Cfg.RdConfig = remote.RdConfig
 	} else {
 		proxy.Cfg = local
 	}
-	fmt.Println("config merge success", *proxy.Cfg)
 }
