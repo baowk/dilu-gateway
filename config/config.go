@@ -1,23 +1,27 @@
 package config
 
-import "github.com/baowk/dilu-rd/config"
+import (
+	"time"
+
+	"github.com/baowk/dilu-rd/config"
+)
 
 // type AppConfig struct {
 // 	App AppInfo `mapstructure:"app" json:"app" yaml:"app"`
 // }
 
-type AppInfo struct {
-	Server   ServerConf        `mapstructure:"server" json:"server" yaml:"server"`
-	Rules    []RuleConf        `mapstructure:"rules" json:"rules" yaml:"rules"`
-	Logger   LogCfg            `mapstructure:"logger" json:"logger" yaml:"logger"`
-	JWT      JWTConf           `mapstructure:"jwt" json:"jwt" yaml:"jwt"`
-	RdConfig config.Config     `mapstructure:"rd-config" json:"rd-config" yaml:"rd-config"`
-	Extend   map[string]string `mapstructure:"extend" json:"extend" yaml:"extend"`
+type AppConfig struct {
+	Server    ServerConf    `mapstructure:"server" json:"server" yaml:"server"`
+	RemoteCfg RemoteCfg     `mapstructure:"remote-cfg" json:"remote-cfg" yaml:"remote-cfg"`
+	Rules     []RuleConf    `mapstructure:"rules" json:"rules" yaml:"rules"`
+	Logger    LogCfg        `mapstructure:"logger" json:"logger" yaml:"logger"`
+	JWT       JWTConf       `mapstructure:"jwt" json:"jwt" yaml:"jwt"`
+	RdConfig  config.Config `mapstructure:"rd-config" json:"rd-config" yaml:"rd-config"`
+	Auth      Auth          `mapstructure:"auth" json:"auth" yaml:"auth"`
 }
 
 type ServerConf struct {
 	Mode         string `mapstructure:"mode" json:"mode" yaml:"mode"`
-	RemoteConfig bool   `mapstructure:"remoteconfig" json:"remoteconfig" yaml:"remoteconfig"`
 	Host         string `mapstructure:"host" json:"host" yaml:"host"`
 	Name         string `mapstructure:"name" json:"name" yaml:"name"`
 	Port         int    `mapstructure:"port" json:"port" yaml:"port"`
@@ -42,34 +46,30 @@ type JWTConf struct {
 	Subject string `mapstructure:"subject" json:"subject" yaml:"subject"` // 签发主体
 }
 
-// type DatabaseConf struct {
-// 	Driver string `mapstructure:"driver"`
-// 	Source string `mapstructure:"source"`
-// }
+type RemoteCfg struct {
+	Enable        bool          `mapstructure:"enable" json:"enable" yaml:"enable"`                         //是否开启远程配置
+	Provider      string        `mapstructure:"provider" json:"provider" yaml:"provider"`                   //提供方
+	Endpoint      string        `mapstructure:"endpoint" json:"endpoint" yaml:"endpoint"`                   //端点
+	Path          string        `mapstructure:"path" json:"path" yaml:"path"`                               //路径
+	SecretKeyring string        `mapstructure:"secret-keyring" json:"secret-keyring" yaml:"secret-keyring"` //安全
+	ConfigType    string        `mapstructure:"config-type" json:"config-type" yaml:"config-type"`          //配置类型
+	Duration      time.Duration `mapstructure:"duration" json:"duration" yaml:"duration"`                   //重试时长
+}
 
-// type CacheConf struct {
-// 	Redis RedisConf `mapstructure:"redis"`
-// }
+func (e *RemoteCfg) GetDuration() time.Duration {
+	if e.Duration < 0 {
+		return time.Second * 10
+	}
+	return e.Duration
+}
 
-// type RedisConf struct {
-// 	Addr     string `mapstructure:"addr"`
-// 	Password string `mapstructure:"password"`
-// 	DB       int    `mapstructure:"db"`
-// }
+func (e *RemoteCfg) GetConfigType() string {
+	if e.ConfigType == "" {
+		return "yaml"
+	}
+	return e.ConfigType
+}
 
-// func LoadFile(filePath string) AppInfo {
-// 	viper.SetConfigFile(filePath) // 指定配置文件路径
-// 	//viper.SetEnvPrefix("app")
-// 	// 读取配置文件
-// 	if err := viper.ReadInConfig(); err != nil {
-// 		panic(err) // 读取配置文件失败
-// 	}
-// 	var config AppInfo
-
-// 	if err := viper.Unmarshal(&config); err != nil {
-// 		log.Fatal(err) // 解析配置文件失败
-// 	}
-
-// 	//fmt.Println(viper.AllKeys())
-// 	return config
-// }
+type Auth struct {
+	BaseUrl string `mapstructure:"base-url" json:"base-url" yaml:"base-url"`
+}

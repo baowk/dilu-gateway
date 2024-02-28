@@ -13,14 +13,14 @@ import (
 
 	"dilu-gateway/config"
 	"dilu-gateway/handler"
-	"dilu-gateway/handler/def_handler"
+	"dilu-gateway/handler/def"
 
 	"github.com/baowk/dilu-rd/rd"
 	"go.uber.org/zap"
 )
 
 var (
-	Cfg *config.AppInfo
+	Cfg *config.AppConfig
 	Log *zap.Logger
 )
 
@@ -63,10 +63,17 @@ func Run() {
 			log.Fatal("init rdclient error")
 		}
 	}
-	Append(def_handler.NewJwt().Secret(Cfg.JWT.Secret).ExpiresAt(Cfg.JWT.Timeout).
-		Subject(Cfg.JWT.Subject).Issuer(Cfg.JWT.Issuer).Refresh(Cfg.JWT.Refresh).Build())
-	m := Cfg.Extend
-	Append(def_handler.AuthProxyHandler{BaseURL: m["authbaseurl"]})
+	jwt := &def.JwtProxyHandler{
+		ExpiresAt: Cfg.JWT.Timeout,
+		Refresh:   Cfg.JWT.Refresh,
+		Issuer:    Cfg.JWT.Issuer,
+		Subject:   Cfg.JWT.Subject,
+		Secret:    Cfg.JWT.Secret,
+	}
+	jwt.Build()
+	Append(jwt)
+	Append(&def.AuthProxyHandler{BaseURL: Cfg.Auth.BaseUrl})
+
 	for _, ruleC := range Cfg.Rules {
 		rule := Rule{
 			Name:      ruleC.RuleName,

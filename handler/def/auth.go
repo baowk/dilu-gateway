@@ -1,4 +1,4 @@
-package def_handler
+package def
 
 import (
 	"dilu-gateway/common"

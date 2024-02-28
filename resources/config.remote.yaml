@@ -1,0 +1,56 @@
+server:
+  name: dilu-gateway      # 服务名称
+  mode: dev         # 应用程序运行模式（dev开发环境、test测试环境、prod线上环境）
+  host: 0.0.0.0     # 服务器IP地址，默认使用0.0.0.0
+  port: 28000       # 服务端口号
+  readtimeout: 1    # 读取超时时间
+  writertimeout: 2  # 写入超时时间
+remote-cfg:
+  enable: true # 开始远程配置
+  provider: consul #远程提供者 etcd etcd3 consul ...
+  endpoint: http://172.19.167.104:8500 #协议地址
+  path: dilu/gateway #路径 key
+  secret-keyring: #加密 不填为非加密
+  duration: 6s #重新获取配置时长
+#rules:            # 规则列表
+#  - rule:         # 规则1
+#    rd : false # true 注册中心模式 false 路由模式，路由模式需要配置upstreams
+#    name: dilu-app       # 注册中心模式name与注册中心的name要保持一致
+#    prefix: /api/v1     # 规则的URL前缀
+#    upstreams:           # 转发至的上游服务器列表（注册中心模式该值不用配置）
+#      - http://localhost:7888
+      #- http://localhost:8000
+      #- http://192.168.0.191:18000
+#    rewrite:             # URL重写规则
+#    handlers:            # 处理器列表
+#      - jwt  # 处理器1
+#      - auth  # 处理器2
+#logger:             # 日志配置
+#  level: debug # 级别
+#  prefix:    # 日志前缀
+#  format:  # 输出格式 json
+#  director: temp/log      # 日志文件夹
+#  encode-level: LowercaseColorLevelEncoder # 编码级
+#  stacktrace-key: # 栈名
+#  show-line: true # 显示行
+#  log-in-console: true # 输出控制台
+  #max-age: 7                         # 日志留存时间 默认7天
+#jwt:                # JWT配置
+#  secret: 5nlKywHIPEkWWIxffGpp8Dfl3z5SjE5WBeDStc1T64klnpoAqHrHN01vnet1CZG4   # Token密钥
+#  timeout: 604800    # Token过期时间（单位：秒）
+#  refresh: 14400    # Token 刷新时长（单位：分钟）
+#rd-config:
+#  enable: false
+#  driver: consul
+#  endpoints:
+#    - 172.19.167.104:8500
+#  scheme: http
+#  timeout: 5s
+#  registers:
+#  discoveries:
+#    - name: dilu-app
+#      enable: true
+#      fail-limit: 3
+#auth:             # 扩展项（此处没有提供具体说明）
+#  base-url: http://localhost:7888
+      

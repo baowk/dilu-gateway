@@ -1,14 +1,16 @@
 package cmd
 
 import (
+	"dilu-gateway/config"
 	"dilu-gateway/proxy"
 	"errors"
 	"fmt"
-	"log"
+	"time"
 
-	homedir "github.com/mitchellh/go-homedir"
+	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	_ "github.com/spf13/viper/remote"
 )
 
 var (
@@ -17,7 +19,7 @@ var (
 	//userLicense string
 
 	rootCmd = &cobra.Command{
-		Use:          "go-gateway -c resources/config.dev.yaml",
+		Use:          "go-gateway -c config.yaml",
 		Short:        "go-gateway",
 		Long:         `go-gateway`,
 		SilenceUsage: true,
@@ -46,40 +48,80 @@ func Execute() error {
 }
 
 func init() {
-
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "./conf/config.dev.yaml", "go-gateway --config config.yaml")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "./resources/config.dev.yaml", "go-gateway -c config.yaml")
 	cobra.OnInitialize(initConfig)
-
-	// rootCmd.PersistentFlags().StringP("author", "a", "YOUR NAME", "author name for copyright attribution")
-	// rootCmd.PersistentFlags().StringVarP(&userLicense, "license", "l", "", "name of license for the project")
-	// rootCmd.PersistentFlags().Bool("viper", true, "use Viper for configuration")
-	// viper.BindPFlag("author", rootCmd.PersistentFlags().Lookup("author"))
-	// viper.BindPFlag("useViper", rootCmd.PersistentFlags().Lookup("viper"))
-	// viper.SetDefault("author", "NAME HERE <EMAIL ADDRESS>")
-	// viper.SetDefault("license", "apache")
 }
 
 func initConfig() {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory.
-		home, err := homedir.Dir()
-		cobra.CheckErr(err)
-
-		// Search config in home directory with name ".cobra" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigName(".yaml")
+	v := viper.New()
+	v.SetConfigFile(cfgFile)
+	//v.SetConfigType("yaml")
+	err := v.ReadInConfig()
+	if err != nil {
+		panic(fmt.Sprintf("Fatal error config file: %v \n", err))
 	}
 
-	viper.AutomaticEnv()
+	var cfg config.AppConfig
 
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-		if err := viper.Unmarshal(&proxy.Cfg); err != nil {
-			log.Fatal(err) // 解析配置文件失败
+	if err = v.Unmarshal(&cfg); err != nil {
+		fmt.Println(err)
+	}
+
+	if cfg.RemoteCfg.Enable {
+		rviper := viper.New()
+		if cfg.RemoteCfg.SecretKeyring == "" {
+			err = rviper.AddRemoteProvider(cfg.RemoteCfg.Provider, cfg.RemoteCfg.Endpoint, cfg.RemoteCfg.Path)
+		} else {
+			err = rviper.AddSecureRemoteProvider(cfg.RemoteCfg.Provider, cfg.RemoteCfg.Endpoint, cfg.RemoteCfg.Path, cfg.RemoteCfg.SecretKeyring)
 		}
-		proxy.Run()
+		if err != nil {
+			panic(fmt.Sprintf("Fatal error remote config : %v \n", err))
+		}
+		rviper.SetConfigType(cfg.RemoteCfg.GetConfigType())
+		err = rviper.ReadRemoteConfig()
+		if err != nil {
+			panic(fmt.Sprintf("Fatal error remote config : %v \n", err))
+		}
+		var remoteCfg config.AppConfig
+		rviper.Unmarshal(&remoteCfg)
+
+		mergeCfg(&cfg, &remoteCfg)
+
+		go func() {
+			for {
+				time.Sleep(cfg.RemoteCfg.GetDuration()) // delay after each request
+				err := rviper.WatchRemoteConfig()
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+				rviper.Unmarshal(&remoteCfg)
+				mergeCfg(&cfg, &remoteCfg)
+			}
+		}()
+	} else {
+		mergeCfg(&cfg, nil)
+		v.WatchConfig()
+		v.OnConfigChange(func(e fsnotify.Event) {
+			fmt.Println("config file changed:", e.String())
+			if err = v.Unmarshal(&cfg); err != nil {
+				fmt.Println(err)
+			}
+			mergeCfg(&cfg, nil)
+
+		})
 	}
+	proxy.Run()
+}
+
+func mergeCfg(local, remote *config.AppConfig) {
+	if remote != nil {
+		proxy.Cfg = local
+		proxy.Cfg = remote
+		proxy.Cfg.Server = local.Server
+		proxy.Cfg.RemoteCfg = local.RemoteCfg
+	} else {
+		proxy.Cfg = local
+	}
+	fmt.Println("config merge success", *proxy.Cfg)
 }
