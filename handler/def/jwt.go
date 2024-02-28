@@ -47,59 +47,6 @@ type JwtProxyHandler struct {
 	Subject    string
 }
 
-// type JwtProxyHandlerBuilder struct {
-// 	h JwtProxyHandler
-// }
-
-// func NewJwt() JwtProxyHandlerBuilder {
-// 	return JwtProxyHandlerBuilder{}
-// }
-
-// func (b JwtProxyHandlerBuilder) Refresh(refresh int) JwtProxyHandlerBuilder {
-// 	b.h.Refresh = refresh
-// 	return b
-// }
-
-// func (b JwtProxyHandlerBuilder) Subject(subject string) JwtProxyHandlerBuilder {
-// 	b.h.Subject = subject
-// 	return b
-// }
-
-// func (b JwtProxyHandlerBuilder) Issuer(issuer string) JwtProxyHandlerBuilder {
-// 	b.h.Issuer = issuer
-// 	return b
-// }
-
-// func (b JwtProxyHandlerBuilder) Secret(secret string) JwtProxyHandlerBuilder {
-// 	b.h.Secret = secret
-// 	return b
-// }
-
-// func (b JwtProxyHandlerBuilder) ExpiresAt(expiresAt int64) JwtProxyHandlerBuilder {
-// 	b.h.ExpiresAt = expiresAt
-// 	return b
-// }
-
-// func (b JwtProxyHandlerBuilder) HeaderKey(headerKey string) JwtProxyHandlerBuilder {
-// 	b.h.HeaderKey = headerKey
-// 	return b
-// }
-
-// func (b JwtProxyHandlerBuilder) HeaderName(headerName string) JwtProxyHandlerBuilder {
-// 	b.h.HeaderName = headerName
-// 	return b
-// }
-
-// func (b JwtProxyHandlerBuilder) QueryKey(queryKey string) JwtProxyHandlerBuilder {
-// 	b.h.QueryKey = queryKey
-// 	return b
-// }
-
-// func (b JwtProxyHandlerBuilder) CookieKey(cookieKey string) JwtProxyHandlerBuilder {
-// 	b.h.CookieKey = cookieKey
-// 	return b
-// }
-
 func (h JwtProxyHandler) Build() {
 	if h.HeaderKey == "" && h.QueryKey == "" && h.CookieKey == "" {
 		h.HeaderKey = "Authorization"

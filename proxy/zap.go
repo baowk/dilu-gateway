@@ -1,12 +1,12 @@
 package proxy
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
 	"time"
 
-	"github.com/baowk/dilu-core/common/utils/files"
 	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -20,7 +20,7 @@ func logInit() {
 
 // Zap 获取 zap.Logger
 func zapInit() (logger *zap.Logger) {
-	if ok, _ := files.PathExists(Cfg.Logger.Director); !ok { // 判断是否有Director文件夹
+	if ok, _ := PathExists(Cfg.Logger.Director); !ok { // 判断是否有Director文件夹
 		fmt.Printf("create %v directory\n", Cfg.Logger.Director)
 		_ = os.MkdirAll(Cfg.Logger.Director, os.ModePerm)
 	}
@@ -145,4 +145,18 @@ func (z *_zap) GetLevelPriority(level zapcore.Level) zap.LevelEnablerFunc {
 			return level == zap.DebugLevel
 		}
 	}
+}
+
+func PathExists(path string) (bool, error) {
+	fi, err := os.Stat(path)
+	if err == nil {
+		if fi.IsDir() {
+			return true, nil
+		}
+		return false, errors.New("存在同名文件")
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
 }
