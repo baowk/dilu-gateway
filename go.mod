@@ -3,7 +3,7 @@ module dilu-gateway
 go 1.20
 
 require (
-	github.com/baowk/dilu-rd v0.0.1
+	github.com/baowk/dilu-rd v0.1.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
