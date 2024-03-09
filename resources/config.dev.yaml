@@ -50,5 +50,6 @@ rd-config:
     - name: dilu-app
       enable: true
       fail-limit: 3
+      tag: #dev test prod 不填会获取当前name下所有tag 根据服务版本过滤
 auth:             # 扩展项（此处没有提供具体说明）
   base-url: http://localhost:7888
