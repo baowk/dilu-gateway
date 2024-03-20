@@ -11,13 +11,13 @@ import (
 // }
 
 type AppConfig struct {
-	Server    ServerConf    `mapstructure:"server" json:"server" yaml:"server"`
-	RemoteCfg RemoteCfg     `mapstructure:"remote-cfg" json:"remote-cfg" yaml:"remote-cfg"`
-	Rules     []RuleConf    `mapstructure:"rules" json:"rules" yaml:"rules"`
-	Logger    LogCfg        `mapstructure:"logger" json:"logger" yaml:"logger"`
-	JWT       JWTConf       `mapstructure:"jwt" json:"jwt" yaml:"jwt"`
-	RdConfig  config.Config `mapstructure:"rd-config" json:"rd-config" yaml:"rd-config"`
-	Extend    Extend        `mapstructure:"extend" json:"extend" yaml:"extend"`
+	Server    ServerConf `mapstructure:"server" json:"server" yaml:"server"`
+	RemoteCfg RemoteCfg  `mapstructure:"remote-cfg" json:"remote-cfg" yaml:"remote-cfg"`
+	Rules     []RuleConf `mapstructure:"rules" json:"rules" yaml:"rules"`
+	//Logger    LogCfg        `mapstructure:"logger" json:"logger" yaml:"logger"`
+	JWT      JWTConf       `mapstructure:"jwt" json:"jwt" yaml:"jwt"`
+	RdConfig config.Config `mapstructure:"rd-config" json:"rd-config" yaml:"rd-config"`
+	Extend   Extend        `mapstructure:"extend" json:"extend" yaml:"extend"`
 }
 
 type ServerConf struct {

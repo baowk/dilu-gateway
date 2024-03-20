@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"math/rand"
 	"net/http"
 	"net/http/httputil"
@@ -16,12 +17,10 @@ import (
 	"dilu-gateway/handler/def"
 
 	"github.com/baowk/dilu-rd/rd"
-	"go.uber.org/zap"
 )
 
 var (
 	Cfg *config.AppConfig
-	Log *zap.Logger
 	rdc rd.RDClient
 )
 
@@ -52,7 +51,6 @@ func Append(h handler.ProxyHandler) {
 }
 
 func Run() {
-	InitLog()
 	InitRd()
 	InitHandler()
 	// 创建一个自定义的请求处理程序
@@ -66,7 +64,7 @@ func Run() {
 					// 从注册中心获取服务列表
 					node, err := rdc.GetService(rule.Name, r.RemoteAddr)
 					if err != nil {
-						Log.Error("get service error", zap.Error(err))
+						slog.Error("get service error", err)
 						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 						return
 					}
@@ -89,7 +87,7 @@ func Run() {
 				// 解析代理目标URL
 				targetURL, err := url.Parse(tgUrl)
 				if err != nil {
-					Log.Error("parse error", zap.Error(err))
+					slog.Error("parse error", err)
 					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					return
 				}
@@ -103,32 +101,32 @@ func Run() {
 						}
 						jsonBytes, err := json.Marshal(data)
 						if err != nil {
-							Log.Error("marshal err", zap.Error(err))
+							slog.Error("marshal err", err)
 						}
 						w.Write(jsonBytes)
-						Log.Warn("before", zap.String("url", tgUrl), zap.String("handler", (*handler).GetName()), zap.String("msg", msg))
+						slog.Warn("before", "url", tgUrl, "handler", (*handler).GetName(), "msg", msg)
 						return
 					}
 				}
 
 				targetURL.Path = ""
 				r.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
-				//Log.Debug("target", zap.String("URL", targetURL.String()), zap.String("path", targetURL.Path))
+				//slog.Debug("target", "URL", targetURL.String()), "path", targetURL.Path))
 				// 创建代理，并将请求重定向到代理目标
 				proxy := httputil.NewSingleHostReverseProxy(targetURL)
 				proxy.ErrorHandler = func(w http.ResponseWriter, req *http.Request, err error) {
-					Log.Error("proxy error", zap.String("url", tgUrl), zap.Error(err))
+					slog.Error("proxy error", "url", tgUrl, err)
 					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				}
 				proxy.ServeHTTP(w, r)
-				Log.Debug("times", zap.Any(tgUrl, time.Now().Sub(startTime)))
+				slog.Debug("times", tgUrl, time.Now().Sub(startTime))
 				return
 			}
 		}
 
 		// 如果没有匹配的规则，则返回404 Not Found
 		http.NotFound(w, r)
-		Log.Error("no match", zap.String("RequestURI", r.RequestURI))
+		slog.Error("no match", "RequestURI", r.RequestURI)
 
 	})
 
@@ -141,20 +139,19 @@ func Run() {
 	}
 }
 
-func InitLog() {
-	// 初始化日志
-	logInit()
-	// 初始化注册中心
+// func Initslog() {
+// 	// 初始化日志
+// 	slogInit()
+// 	// 初始化注册中心
 
-}
+// }
 
 func InitRd() {
 	if Cfg.RdConfig.Enable {
 		var err error
-		rdc, err = rd.NewRDClient(&Cfg.RdConfig, Log.Sugar())
+		rdc, err = rd.NewRDClient(&Cfg.RdConfig)
 		if err != nil {
-			Log.Error("init rd client error", zap.Error(err))
-			log.Fatal("init rdclient error")
+			log.Fatal("init rdclient error", err)
 		}
 	}
 }

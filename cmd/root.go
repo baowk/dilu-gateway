@@ -5,6 +5,7 @@ import (
 	"dilu-gateway/proxy"
 	"errors"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"time"
 
@@ -12,7 +13,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	_ "github.com/spf13/viper/remote"
-	"go.uber.org/zap"
 )
 
 var (
@@ -98,16 +98,16 @@ func initConfig() {
 				var watchCfg config.AppConfig
 				err = rviper.Unmarshal(&watchCfg)
 				if err != nil {
-					proxy.Log.Error("watch err", zap.Error(err))
+					slog.Error("watch err", err)
 					continue
 				}
 				if !reflect.DeepEqual(remoteCfg, watchCfg) {
-					proxy.Log.Debug("watch config changed", zap.Any("config", watchCfg))
+					slog.Debug("watch config changed", "config", watchCfg)
 					//fmt.Println("watch config changed", remoteCfg, watchCfg)
 					mergeCfg(&cfg, &watchCfg)
-					if !reflect.DeepEqual(remoteCfg.Logger, watchCfg.Logger) {
-						proxy.InitLog()
-					}
+					// if !reflect.DeepEqual(remoteCfg.Logger, watchCfg.Logger) {
+					// 	proxy.InitLog()
+					// }
 					if !reflect.DeepEqual(remoteCfg.RdConfig, watchCfg.RdConfig) {
 						proxy.InitRd()
 					}
@@ -125,7 +125,7 @@ func initConfig() {
 		v.WatchConfig()
 		v.OnConfigChange(func(e fsnotify.Event) {
 			fmt.Println("config file changed:", e.String())
-			proxy.Log.Debug("config file changed", zap.String("config", e.String()))
+			slog.Debug("config file changed", "config", e.String())
 			if err = v.Unmarshal(&cfg); err != nil {
 				fmt.Println(err)
 			}
@@ -138,7 +138,7 @@ func initConfig() {
 func mergeCfg(local, remote *config.AppConfig) {
 	if remote != nil {
 		proxy.Cfg = local
-		proxy.Cfg.Logger = remote.Logger
+		//proxy.Cfg.Logger = remote.Logger
 		proxy.Cfg.JWT = remote.JWT
 		proxy.Cfg.Rules = remote.Rules
 		proxy.Cfg.Extend = remote.Extend
