@@ -64,7 +64,7 @@ func Run() {
 					// 从注册中心获取服务列表
 					node, err := rdc.GetService(rule.Name, r.RemoteAddr)
 					if err != nil {
-						slog.Error("get service error", err)
+						slog.Error("get service", "error", err)
 						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 						return
 					}
@@ -87,7 +87,7 @@ func Run() {
 				// 解析代理目标URL
 				targetURL, err := url.Parse(tgUrl)
 				if err != nil {
-					slog.Error("parse error", err)
+					slog.Error("parse", "error", err)
 					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 					return
 				}
@@ -101,7 +101,7 @@ func Run() {
 						}
 						jsonBytes, err := json.Marshal(data)
 						if err != nil {
-							slog.Error("marshal err", err)
+							slog.Error("marshal err", "error", err)
 						}
 						w.Write(jsonBytes)
 						slog.Warn("before", "url", tgUrl, "handler", (*handler).GetName(), "msg", msg)
@@ -115,7 +115,7 @@ func Run() {
 				// 创建代理，并将请求重定向到代理目标
 				proxy := httputil.NewSingleHostReverseProxy(targetURL)
 				proxy.ErrorHandler = func(w http.ResponseWriter, req *http.Request, err error) {
-					slog.Error("proxy error", "url", tgUrl, err)
+					slog.Error("proxy error", "url", tgUrl, "error", err)
 					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				}
 				proxy.ServeHTTP(w, r)
@@ -138,13 +138,6 @@ func Run() {
 		log.Fatal(err)
 	}
 }
-
-// func Initslog() {
-// 	// 初始化日志
-// 	slogInit()
-// 	// 初始化注册中心
-
-// }
 
 func InitRd() {
 	if Cfg.RdConfig.Enable {

@@ -98,7 +98,7 @@ func initConfig() {
 				var watchCfg config.AppConfig
 				err = rviper.Unmarshal(&watchCfg)
 				if err != nil {
-					slog.Error("watch err", err)
+					slog.Error("watch", "err", err)
 					continue
 				}
 				if !reflect.DeepEqual(remoteCfg, watchCfg) {
@@ -124,7 +124,6 @@ func initConfig() {
 		mergeCfg(&cfg, nil)
 		v.WatchConfig()
 		v.OnConfigChange(func(e fsnotify.Event) {
-			fmt.Println("config file changed:", e.String())
 			slog.Debug("config file changed", "config", e.String())
 			if err = v.Unmarshal(&cfg); err != nil {
 				fmt.Println(err)
